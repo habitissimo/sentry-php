@@ -81,7 +81,11 @@ class Raven_ErrorHandler
             if ($this->old_exception_handler !== null) {
                 call_user_func($this->old_exception_handler, $e);
             } else {
-                throw $e;
+                // Do not rethrow `Error` exceptions on PHP 7
+                // It will result in double reporting of the Error
+                if (!(PHP_VERSION_ID >= 70000 && $e instanceof Error)) {
+                    throw $e;
+                }
             }
         }
     }
@@ -140,13 +144,6 @@ class Raven_ErrorHandler
 
     public function shouldCaptureFatalError($type)
     {
-        // Do not capture E_ERROR since those can be caught by userland since PHP 7.0
-        // E_ERROR should already be handled by the exception handler
-        // This prevents duplicated exceptions in PHP 7.0+
-        if (PHP_VERSION_ID >= 70000 && $type === E_ERROR) {
-            return false;
-        }
-
         return $type & $this->fatal_error_types;
     }
 
