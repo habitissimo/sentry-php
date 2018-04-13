@@ -107,6 +107,28 @@ class Raven_Processor_SanitizeDataProcessor extends Raven_Processor
         }
     }
 
+    public function sanitizeBreadcrumbsMessage(&$data)
+    {
+        // Get all fields_re and separate them into different values
+        // of an array
+        preg_match("/\((.)*\)/", $this->fields_re, $matches);
+        $fields = substr($matches[0], 1, -1);
+        $fields = explode("|", $fields);
+
+        // For each field_re, if the message string contains such an entry
+        // mask it's value.
+        $mask = self::STRING_MASK;
+        foreach ($fields as $field) {
+            if (isset($data['message'])) {
+                $data['message'] = preg_replace(
+                    "/\"{$field}\": \"(.)*\"/",
+                    "\"{$field}\": \"{$mask}\"",
+                    $data['message']
+                );
+            }
+        }
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -123,6 +145,9 @@ class Raven_Processor_SanitizeDataProcessor extends Raven_Processor
         }
         if (!empty($data['extra'])) {
             array_walk_recursive($data['extra'], array($this, 'sanitize'));
+        }
+        if (!empty($data['breadcrumbs'])) {
+            array_walk($data['breadcrumbs'], [$this, 'sanitizeBreadcrumbsMessage']);
         }
     }
 
